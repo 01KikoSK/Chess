@@ -1,0 +1,1258 @@
+```html type=html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chess Position Analyzer with PGN Support</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+darkMode: 'class',
+theme: {
+extend: {
+colors: {
+primary: '#5D5CDE'
+}
+}
+}
+}
+</script>
+</head>
+<body class="bg-white dark:bg-gray-900 transition-colors duration-200">
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+<h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-8 text-center">Chess Position Analyzer with PGN Support</h1>
+
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+<!-- Chess Board with Navigation -->
+<div class="lg:col-span-3">
+<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+<!-- Navigation Controls -->
+<div class="flex justify-center mb-4 gap-2">
+<button id="firstBtn" class="px-3 py-2 bg-primary text-white rounded hover:bg-primary/80 transition-colors text-sm font-mono" title="First move">⏮</button>
+<button id="prevBtn" class="px-3 py-2 bg-primary text-white rounded hover:bg-primary/80 transition-colors text-sm font-mono" title="Previous move">◀</button>
+<button id="nextBtn" class="px-3 py-2 bg-primary text-white rounded hover:bg-primary/80 transition-colors text-sm font-mono" title="Next move">▶</button>
+<button id="lastBtn" class="px-3 py-2 bg-primary text-white rounded hover:bg-primary/80 transition-colors text-sm font-mono" title="Last move">⏭</button>
+</div>
+
+<div class="flex justify-center mb-4">
+<canvas id="chessboard" width="600" height="600" class="border-2 border-amber-800 dark:border-amber-600 rounded-xl shadow-2xl cursor-pointer" style="background: linear-gradient(135deg, #8b4513, #a0522d);"></canvas>
+</div>
+
+<div class="flex flex-wrap gap-2 justify-center mb-4">
+<button id="resetBtn" class="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80 transition-colors text-sm">Reset Board</button>
+<button id="flipBtn" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm">Flip Board</button>
+<button id="clearBtn" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm">Clear Board</button>
+</div>
+
+<!-- Board Color Themes -->
+<div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+<h4 class="text-sm font-medium text-gray-800 dark:text-white mb-3">Board Colors</h4>
+<div class="grid grid-cols-2 gap-2">
+<button id="currentTheme" class="px-3 py-2 bg-amber-800 text-white rounded hover:bg-amber-700 transition-colors text-xs border-2 border-transparent">Current</button>
+<button id="warmTheme" class="px-3 py-2 bg-amber-700 text-white rounded hover:bg-amber-600 transition-colors text-xs border-2 border-transparent">Classic Warmth</button>
+<button id="coolTheme" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors text-xs border-2 border-transparent">Cool Tones</button>
+<button id="greenTheme" class="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-500 transition-colors text-xs border-2 border-green-400">Green Theme</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Analysis and Game Notation -->
+<div class="lg:col-span-2 space-y-6">
+<!-- PGN Import -->
+<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-lg">
+<h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">PGN Import</h3>
+<input type="file" id="pgnFile" accept=".pgn" class="w-full mb-2 text-sm text-gray-600 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-primary file:text-white hover:file:bg-primary/80">
+<textarea id="pgnText" rows="3" class="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-white resize-none" placeholder="Or paste PGN text here..."></textarea>
+<div class="flex gap-2 mt-2">
+<button id="loadPgnBtn" class="px-3 py-1 bg-primary text-white rounded hover:bg-primary/80 transition-colors text-xs">Load PGN</button>
+<button id="exportPgnBtn" class="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-xs">Export PGN</button>
+</div>
+</div>
+
+<!-- Game Info -->
+<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-lg">
+<h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">Game Info</h3>
+<div id="gameInfo" class="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+<div>No game loaded</div>
+</div>
+</div>
+
+<!-- Game Notation -->
+<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-lg">
+<h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">Game Notation</h3>
+<div id="gameNotation" class="max-h-64 overflow-y-auto text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-mono border border-gray-200 dark:border-gray-600 rounded p-3 bg-white dark:bg-gray-900">
+<span class="text-gray-500 dark:text-gray-400">Load a PGN to see moves</span>
+</div>
+</div>
+
+<!-- Position Info -->
+<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-lg">
+<h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">Position Info</h3>
+<div class="space-y-2 text-sm">
+<div class="flex justify-between">
+<span class="text-gray-600 dark:text-gray-400">Turn:</span>
+<span id="turnDisplay" class="font-medium text-gray-800 dark:text-white">White</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-600 dark:text-gray-400">In Check:</span>
+<span id="checkDisplay" class="font-medium text-gray-800 dark:text-white">No</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-600 dark:text-gray-400">Move:</span>
+<span id="moveNumberDisplay" class="font-medium text-gray-800 dark:text-white">1</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-600 dark:text-gray-400">Position:</span>
+<span id="positionDisplay" class="font-medium text-gray-800 dark:text-white">0/0</span>
+</div>
+</div>
+</div>
+
+<!-- FEN Input/Output -->
+<div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 shadow-lg">
+<h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">FEN Position</h3>
+<textarea id="fenInput" rows="3" class="w-full p-2 text-base border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-white resize-none" placeholder="Enter FEN notation..."></textarea>
+<div class="flex gap-2 mt-2">
+<button id="loadFenBtn" class="px-3 py-1 bg-primary text-white rounded hover:bg-primary/80 transition-colors text-xs">Load FEN</button>
+<button id="copyFenBtn" class="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-xs">Copy FEN</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<script type="module">
+import { Chess } from 'https://unpkg.com/chess.js@1.4.0/dist/esm/chess.js';
+
+class PGNParser {
+static parse(pgnText) {
+const games = [];
+const gameTexts = pgnText.split(/(?=\[Event)/g).filter(text => text.trim());
+
+for (const gameText of gameTexts) {
+try {
+const game = this.parseGame(gameText);
+if (game) games.push(game);
+} catch (e) {
+console.warn('Failed to parse game:', e);
+}
+}
+
+return games;
+}
+
+static parseGame(gameText) {
+const lines = gameText.trim().split('\n');
+const headers = {};
+let moveText = '';
+let inHeaders = true;
+
+for (const line of lines) {
+if (inHeaders && line.startsWith('[')) {
+const match = line.match(/\[(\w+)\s+"([^"]*)"\]/);
+if (match) {
+headers[match[1]] = match[2];
+}
+} else if (line.trim()) {
+inHeaders = false;
+moveText += line + ' ';
+}
+}
+
+const moves = this.parseMoves(moveText.trim());
+return { headers, moves };
+}
+
+static parseMoves(moveText) {
+// Remove comments and normalize
+moveText = moveText
+.replace(/\{[^}]*\}/g, '') // Remove comments
+.replace(/;[^\n]*/g, '') // Remove line comments
+.replace(/\s+/g, ' ')
+.trim();
+
+const tree = { move: null, children: [], parent: null, san: '', comment: '' };
+let current = tree;
+const tokens = this.tokenize(moveText);
+
+for (let i = 0; i < tokens.length; i++) {
+const token = tokens[i];
+
+if (token.match(/^\d+\.+$/)) {
+// Move number, skip
+continue;
+} else if (token === '(') {
+// Start variation
+const variation = { move: null, children: [], parent: current.parent, san: '', comment: '' };
+if (current.parent) {
+current.parent.children.push(variation);
+}
+current = variation;
+} else if (token === ')') {
+// End variation
+if (current.parent && current.parent.parent) {
+current = current.parent.parent;
+// Find the last main line move
+while (current.children.length > 0) {
+current = current.children[0];
+}
+}
+} else if (token.match(/^(1-0|0-1|1\/2-1\/2|\*)$/)) {
+// Game result, skip
+continue;
+} else if (token.match(/^[NBRQK]?[a-h]?[1-8]?x?[a-h][1-8](\=[NBRQ])?[\+#]?|O-O(-O)?[\+#]?$/)) {
+// Valid move
+const moveNode = { move: token, children: [], parent: current, san: token, comment: '' };
+current.children.push(moveNode);
+current = moveNode;
+}
+}
+
+return tree;
+}
+
+static tokenize(text) {
+const tokens = [];
+const rawTokens = text.split(/\s+/).filter(token => token.length > 0);
+
+for (const token of rawTokens) {
+// Split move numbers that are attached to moves (e.g., "1.e4" -> ["1.", "e4"])
+const moveNumberMatch = token.match(/^(\d+\.+)(.+)$/);
+if (moveNumberMatch) {
+tokens.push(moveNumberMatch[1]); // Move number (e.g., "1.")
+tokens.push(moveNumberMatch[2]); // Move (e.g., "e4")
+} else {
+tokens.push(token);
+}
+}
+
+return tokens;
+}
+}
+
+class ChessAnalyzer {
+constructor() {
+this.chess = new Chess();
+this.canvas = document.getElementById('chessboard');
+this.ctx = this.canvas.getContext('2d');
+this.boardFlipped = false;
+this.squareSize = 70;
+this.selectedSquare = null;
+this.highlightedSquares = [];
+this.hoveredSquare = null;
+
+// PGN and navigation
+this.gameTree = null;
+this.currentNode = null;
+this.currentPath = [];
+this.gameHeaders = {};
+
+// Enhanced Colors and Styles
+this.currentTheme = 'green';
+this.themes = {
+current: {
+light: { base: '#f8f8dc', gradient: '#f0f0c8' },
+dark: { base: '#a0522d', gradient: '#8b4513' },
+border: '#8b4513'
+},
+warm: {
+light: { base: 'rgb(245, 235, 215)', gradient: 'rgb(240, 230, 210)' },
+dark: { base: 'rgb(172, 136, 89)', gradient: 'rgb(162, 126, 79)' },
+border: 'rgb(162, 126, 79)'
+},
+cool: {
+light: { base: 'rgb(214, 248, 255)', gradient: 'rgb(204, 238, 255)' },
+dark: { base: 'rgb(112, 163, 214)', gradient: 'rgb(102, 153, 204)' },
+border: 'rgb(102, 153, 204)'
+},
+green: {
+light: { base: 'rgb(234, 252, 234)', gradient: 'rgb(224, 242, 224)' },
+dark: { base: 'rgb(98, 153, 76)', gradient: 'rgb(88, 143, 66)' },
+border: 'rgb(88, 143, 66)'
+}
+};
+
+this.highlightColor = '#7fc47f';
+this.selectedColor = '#4a90e2';
+this.lastMoveColor = '#ffeb3b';
+this.hoverColor = '#e0e0e0';
+this.pieceSize = 64;
+
+this.initializeEventListeners();
+this.updateDisplay();
+this.drawBoard();
+}
+
+initializeEventListeners() {
+// Canvas click handler
+this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
+
+// Navigation buttons
+document.getElementById('firstBtn').addEventListener('click', () => this.goToFirst());
+document.getElementById('prevBtn').addEventListener('click', () => this.goToPrevious());
+document.getElementById('nextBtn').addEventListener('click', () => this.goToNext());
+document.getElementById('lastBtn').addEventListener('click', () => this.goToLast());
+
+// Button handlers
+document.getElementById('resetBtn').addEventListener('click', () => this.resetBoard());
+document.getElementById('flipBtn').addEventListener('click', () => this.flipBoard());
+document.getElementById('clearBtn').addEventListener('click', () => this.clearBoard());
+document.getElementById('loadFenBtn').addEventListener('click', () => this.loadFEN());
+document.getElementById('copyFenBtn').addEventListener('click', () => this.copyFEN());
+
+// PGN handlers
+document.getElementById('pgnFile').addEventListener('change', (e) => this.handlePGNFile(e));
+document.getElementById('loadPgnBtn').addEventListener('click', () => this.loadPGNText());
+document.getElementById('exportPgnBtn').addEventListener('click', () => this.exportPGN());
+
+// Color theme handlers
+document.getElementById('currentTheme').addEventListener('click', () => this.changeTheme('current'));
+document.getElementById('warmTheme').addEventListener('click', () => this.changeTheme('warm'));
+document.getElementById('coolTheme').addEventListener('click', () => this.changeTheme('cool'));
+document.getElementById('greenTheme').addEventListener('click', () => this.changeTheme('green'));
+}
+
+async handlePGNFile(event) {
+const file = event.target.files[0];
+if (file) {
+try {
+const text = await file.text();
+this.loadPGN(text);
+} catch (e) {
+this.showNotification('Failed to read PGN file', 'error');
+}
+}
+}
+
+loadPGNText() {
+const pgnText = document.getElementById('pgnText').value.trim();
+if (pgnText) {
+this.loadPGN(pgnText);
+}
+}
+
+loadPGN(pgnText) {
+try {
+// Ako je tekst prazan, nemoj ništa raditi
+if (!pgnText.trim()) {
+return;
+}
+
+// Čistimo PGN od varijacija i komentara koje chess.js ne može da parsira
+const cleanedPgn = this.cleanPgnForChessJs(pgnText);
+
+const tempChess = new Chess();
+
+// ISPRAVKA: Uklonili smo proveru povratne vrednosti.
+// Ako pgnText nije validan, ovaj red će automatski "baciti" grešku
+// i izvršavanje će se prebaciti u `catch` blok.
+tempChess.loadPgn(cleanedPgn, { sloppy: true });
+
+// Ostatak koda ostaje isti
+this.gameHeaders = tempChess.header();
+const history = tempChess.history();
+
+this.gameTree = { move: null, children: [], parent: null, san: '', comment: '' };
+let currentNode = this.gameTree;
+
+for (const san of history) {
+const newNode = {
+move: san,
+children: [],
+parent: currentNode,
+san: san,
+comment: ''
+};
+currentNode.children.push(newNode);
+currentNode = newNode;
+}
+
+this.chess.reset();
+this.currentNode = this.gameTree;
+this.currentPath = [];
+this.selectedSquare = null;
+this.highlightedSquares = [];
+
+this.updateGameInfo();
+this.renderNotation();
+this.updateDisplay();
+this.drawBoard();
+
+this.showNotification('PGN successfully loaded', 'success');
+
+} catch (e) {
+console.error('Error parsing PGN:', e);
+this.showNotification('Cannot process PGN. Please check format.', 'error');
+}
+}
+
+cleanPgnForChessJs(pgnText) {
+let cleaned = pgnText;
+
+// Uklanjamo komentare u vitičastim zagradama
+cleaned = cleaned.replace(/\{[^}]*\}/g, '');
+
+// Uklanjamo komentare sa ; do kraja reda
+cleaned = cleaned.replace(/;[^\n\r]*/g, '');
+
+// Uklanjamo varijacije u zagradama (jednostavno rešenje)
+let depth = 0;
+let result = '';
+for (let i = 0; i < cleaned.length; i++) {
+const char = cleaned[i];
+if (char === '(') {
+depth++;
+} else if (char === ')') {
+depth--;
+} else if (depth === 0) {
+result += char;
+}
+}
+
+// Normalizujemo razmake
+result = result.replace(/\s+/g, ' ').trim();
+
+return result;
+}
+
+updateGameInfo() {
+const infoDiv = document.getElementById('gameInfo');
+if (Object.keys(this.gameHeaders).length === 0) {
+infoDiv.innerHTML = '<div>No game loaded</div>';
+return;
+}
+
+const importantHeaders = ['Event', 'Site', 'Date', 'White', 'Black', 'Result', 'WhiteElo', 'BlackElo'];
+let html = '';
+
+for (const header of importantHeaders) {
+if (this.gameHeaders[header]) {
+html += `<div><strong>${header}:</strong> ${this.gameHeaders[header]}</div>`;
+}
+}
+
+infoDiv.innerHTML = html || '<div>Game information not available</div>';
+}
+
+renderNotation() {
+const notationDiv = document.getElementById('gameNotation');
+if (!this.gameTree) {
+notationDiv.innerHTML = '<span class="text-gray-500 dark:text-gray-400">Make moves or load a PGN to see notation</span>';
+return;
+}
+
+// --- ISPRAVLJENA LOGIKA ZA ZADRŽAVANJE SKROLA ---
+
+// 1. Sačuvaj trenutnu poziciju skrola PRE nego što se sadržaj promeni.
+const savedScrollTop = notationDiv.scrollTop;
+
+// 2. Generiši novi HTML za notaciju kao i pre.
+const html = this.renderMoveTree(this.gameTree, 1, [], false);
+notationDiv.innerHTML = html;
+
+// 3. Vrati skrol na sačuvanu poziciju ODMAH nakon iscrtavanja.
+// Ovo sprečava bilo kakvo "skakanje" ili automatsko pomeranje.
+notationDiv.scrollTop = savedScrollTop;
+}
+
+renderMoveTree(node, moveNumber, path, isNewVariation = false) {
+let html = '';
+
+const moves = node.children;
+if (!moves || moves.length === 0) {
+return '';
+}
+
+const mainMove = moves[0];
+const mainMovePath = [...path, 0];
+const isWhiteMove = moveNumber % 2 === 1;
+
+if (isWhiteMove) {
+html += `<span class="text-gray-600 dark:text-gray-400">${Math.ceil(moveNumber / 2)}.</span> `;
+} else if (isNewVariation) {
+html += `<span class="text-gray-600 dark:text-gray-400">${Math.floor(moveNumber / 2)}...</span> `;
+}
+
+const isCurrentMove = this.arraysEqual(mainMovePath, this.currentPath);
+const classes = ['cursor-pointer', 'hover:bg-primary', 'hover:text-white', 'px-1', 'rounded', 'transition-colors'];
+if (isCurrentMove) {
+classes.push('bg-primary', 'text-white');
+}
+html += `<span class="${classes.join(' ')}" data-path="${JSON.stringify(mainMovePath)}">${mainMove.san}</span> `;
+
+// KORAK 2: Ispisivanje svih varijacija (ISPRAVLJENA LOGIKA)
+if (moves.length > 1) {
+for (let i = 1; i < moves.length; i++) {
+const variationNode = moves[i];
+const variationPath = [...path, i]; // Kreiramo ISPRAVNU putanju za varijaciju
+
+html += '<span class="text-gray-500">(</span> ';
+
+// Rekurzivni poziv za varijaciju, ali sa prosleđivanjem ispravne putanje
+// Kreiramo "privremeni roditeljski" čvor da bismo iskoristili postojeću logiku funkcije
+const tempParentForVariation = { children: [variationNode] };
+const variationHTML = this.renderMoveTree(
+{ children: [variationNode] }, // Lažni roditelj koji sadrži samo potez varijacije
+moveNumber, // Potez počinje sa istim brojem
+[...path, i], // Prosleđujemo putanju koja uključuje 'i' ali bez poslednjeg '0'
+true // Označavamo da je ovo početak varijacije
+);
+// Uklanjamo pogrešno generisanu putanju i ubacujemo ispravnu
+const correctedVariationHTML = variationHTML.replace(
+`data-path="[[...path,i],0]"`, // Ovo je šablon koji stara funkcija pogrešno napravi
+`data-path="${JSON.stringify(variationPath)}"` // Ispravna putanja
+);
+
+// Malo drugačiji pristup da bude robustnije:
+let tempHtml = '';
+if (isWhiteMove) {
+tempHtml += `<span class="text-gray-600 dark:text-gray-400">${Math.ceil(moveNumber / 2)}.</span> `;
+} else {
+tempHtml += `<span class="text-gray-600 dark:text-gray-400">${Math.floor(moveNumber / 2)}...</span> `;
+}
+
+const isCurrentVarMove = this.arraysEqual(variationPath, this.currentPath);
+const varClasses = ['cursor-pointer', 'hover:bg-primary', 'hover:text-white', 'px-1', 'rounded', 'transition-colors'];
+if (isCurrentVarMove) {
+varClasses.push('bg-primary', 'text-white');
+}
+tempHtml += `<span class="${varClasses.join(' ')}" data-path="${JSON.stringify(variationPath)}">${variationNode.san}</span> `;
+tempHtml += this.renderMoveTree(variationNode, moveNumber + 1, variationPath, false);
+
+html += tempHtml;
+html += '<span class="text-gray-500">) </span>';
+}
+}
+
+// KORAK 3: Nastavak niz glavnu liniju
+html += this.renderMoveTree(mainMove, moveNumber + 1, mainMovePath, false);
+
+return html;
+}
+
+// ... ostatak koda ...
+// U funkciji `renderMoveTree` gore, morate takođe promeniti kako se rekurzivni poziv za varijacije ponaša.
+// Zamenite liniju u `for` petlji za varijacije sa ovom logikom:
+
+// (Ova izmena je već ubačena u kompletnu funkciju iznad, ali je ovde istaknuta radi jasnoće)
+// Stara, neispravna linija:
+// html += this.renderMoveTree(tempParentForVariation, moveNumber, path, true);
+
+// Umesto nje, potrebno je koristiti logiku koja ispravno rukuje putanjama.
+// Kompletan kod iznad sadrži finalnu, ispravljenu verziju.
+
+arraysEqual(a, b) {
+if (a.length !== b.length) return false;
+for (let i = 0; i < a.length; i++) {
+if (a[i] !== b[i]) return false;
+}
+return true;
+}
+
+goToFirst() {
+if (!this.gameTree) return;
+
+this.chess.reset();
+this.currentNode = this.gameTree;
+this.currentPath = [];
+this.selectedSquare = null;
+this.highlightedSquares = [];
+
+this.updateDisplay();
+this.drawBoard();
+this.renderNotation();
+}
+
+goToPrevious() {
+if (!this.gameTree || this.currentPath.length === 0) return;
+
+this.currentPath.pop();
+
+this.chess.reset();
+this.currentNode = this.gameTree;
+
+for (const index of this.currentPath) {
+this.currentNode = this.currentNode.children[index];
+if (this.currentNode && this.currentNode.move) {
+try {
+this.chess.move(this.currentNode.san);
+} catch (e) {
+console.error('Invalid move during navigation:', this.currentNode.san);
+}
+}
+}
+
+this.selectedSquare = null;
+this.highlightedSquares = [];
+this.updateDisplay();
+this.drawBoard();
+this.renderNotation();
+}
+
+goToNext() {
+if (!this.gameTree) return;
+
+let node = this.gameTree;
+for (const index of this.currentPath) {
+if (node.children[index]) {
+node = node.children[index];
+}
+}
+
+if (node.children.length > 0) {
+const nextNode = node.children[0];
+if (nextNode.move) {
+try {
+this.chess.move(nextNode.san);
+this.currentPath.push(0);
+this.currentNode = nextNode;
+
+
+
+this.selectedSquare = null;
+this.highlightedSquares = [];
+this.updateDisplay();
+this.drawBoard();
+this.renderNotation();
+} catch (e) {
+console.error('Invalid move:', nextNode.san);
+}
+}
+}
+}
+
+goToLast() {
+if (!this.gameTree) return;
+
+this.chess.reset();
+this.currentPath = [];
+let node = this.gameTree;
+
+while (node.children.length > 0) {
+node = node.children[0];
+if (node.move) {
+try {
+this.chess.move(node.san);
+this.currentPath.push(0);
+} catch (e) {
+console.error('Invalid move during navigation to last:', node.san);
+break;
+}
+}
+}
+
+this.currentNode = node;
+
+
+
+this.selectedSquare = null;
+this.highlightedSquares = [];
+this.updateDisplay();
+this.drawBoard();
+this.renderNotation();
+}
+
+handleMouseMove(e) {
+const square = this.getSquareFromCoords(e.clientX, e.clientY);
+if (square !== this.hoveredSquare) {
+this.hoveredSquare = square;
+this.drawBoard();
+}
+
+// Handle move clicks in notation
+const target = e.target;
+if (target.hasAttribute('data-path')) {
+target.style.cursor = 'pointer';
+}
+}
+
+handleMouseLeave() {
+this.hoveredSquare = null;
+this.drawBoard();
+}
+
+getSquareFromCoords(x, y) {
+const rect = this.canvas.getBoundingClientRect();
+const canvasX = x - rect.left;
+const canvasY = y - rect.top;
+
+const col = Math.floor(canvasX / this.squareSize);
+const row = Math.floor(canvasY / this.squareSize);
+
+if (col < 0 || col > 7 || row < 0 || row > 7) return null;
+
+const files = 'abcdefgh';
+const ranks = '87654321';
+
+if (this.boardFlipped) {
+return files[7 - col] + ranks[7 - row];
+} else {
+return files[col] + ranks[row];
+}
+}
+
+getSquareCoords(square) {
+const file = square.charCodeAt(0) - 97;
+const rank = parseInt(square[1]) - 1;
+
+let col, row;
+if (this.boardFlipped) {
+col = 7 - file;
+row = rank;
+} else {
+col = file;
+row = 7 - rank;
+}
+
+return { x: col * this.squareSize, y: row * this.squareSize };
+}
+
+handleCanvasClick(e) {
+const square = this.getSquareFromCoords(e.clientX, e.clientY);
+if (!square) return;
+
+if (this.selectedSquare) {
+try {
+const move = this.chess.move({
+from: this.selectedSquare,
+to: square,
+promotion: 'q'
+});
+
+if (move) {
+// Add move to the game tree
+this.addMoveToTree(move.san);
+
+this.selectedSquare = null;
+this.highlightedSquares = [];
+this.updateDisplay();
+this.drawBoard();
+this.renderNotation();
+return;
+}
+} catch (e) {
+// Invalid move
+}
+}
+
+const piece = this.chess.get(square);
+if (piece && piece.color === this.chess.turn()) {
+this.selectedSquare = square;
+this.highlightedSquares = this.chess.moves({ square: square, verbose: true })
+.map(move => move.to);
+} else {
+this.selectedSquare = null;
+this.highlightedSquares = [];
+}
+
+this.drawBoard();
+}
+
+drawBoard() {
+this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+this.ctx.save();
+
+this.drawBoardBorder();
+
+for (let row = 0; row < 8; row++) {
+for (let col = 0; col < 8; col++) {
+this.drawSquare(row, col);
+}
+}
+
+this.drawPieces();
+this.drawCoordinates();
+this.ctx.restore();
+}
+
+drawBoardBorder() {
+this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+this.ctx.shadowBlur = 10;
+this.ctx.shadowOffsetX = 3;
+this.ctx.shadowOffsetY = 3;
+
+this.ctx.fillStyle = this.themes[this.currentTheme].border;
+this.ctx.fillRect(-5, -5, this.canvas.width + 60, this.canvas.height + 60);
+
+this.ctx.shadowColor = 'transparent';
+this.ctx.shadowBlur = 0;
+this.ctx.shadowOffsetX = 0;
+this.ctx.shadowOffsetY = 0;
+}
+
+drawSquare(row, col) {
+const x = col * this.squareSize;
+const y = row * this.squareSize;
+const isLight = (row + col) % 2 === 0;
+
+const files = 'abcdefgh';
+const ranks = '87654321';
+let square;
+
+if (this.boardFlipped) {
+square = files[7 - col] + ranks[7 - row];
+} else {
+square = files[col] + ranks[row];
+}
+
+const theme = this.themes[this.currentTheme];
+const gradient = this.ctx.createLinearGradient(x, y, x + this.squareSize, y + this.squareSize);
+if (isLight) {
+gradient.addColorStop(0, theme.light.base);
+gradient.addColorStop(1, theme.light.gradient);
+} else {
+gradient.addColorStop(0, theme.dark.base);
+gradient.addColorStop(1, theme.dark.gradient);
+}
+
+this.ctx.fillStyle = gradient;
+this.ctx.fillRect(x, y, this.squareSize, this.squareSize);
+
+this.ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)';
+this.ctx.lineWidth = 1;
+this.ctx.strokeRect(x + 0.5, y + 0.5, this.squareSize - 1, this.squareSize - 1);
+
+if (this.hoveredSquare === square) {
+const hoverGradient = this.ctx.createRadialGradient(
+x + this.squareSize / 2, y + this.squareSize / 2, 0,
+x + this.squareSize / 2, y + this.squareSize / 2, this.squareSize / 2
+);
+hoverGradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+hoverGradient.addColorStop(1, 'rgba(255, 255, 255, 0.1)');
+
+this.ctx.fillStyle = hoverGradient;
+this.ctx.fillRect(x, y, this.squareSize, this.squareSize);
+}
+
+if (this.selectedSquare === square) {
+this.ctx.shadowColor = this.selectedColor;
+this.ctx.shadowBlur = 15;
+this.ctx.fillStyle = this.selectedColor + '40';
+this.ctx.fillRect(x, y, this.squareSize, this.squareSize);
+
+this.ctx.shadowColor = 'transparent';
+this.ctx.shadowBlur = 0;
+}
+
+if (this.highlightedSquares.includes(square)) {
+const pulse = Math.sin(Date.now() * 0.008) * 0.1 + 0.4;
+this.ctx.fillStyle = this.highlightColor + Math.floor(pulse * 255).toString(16).padStart(2, '0');
+
+this.ctx.beginPath();
+this.ctx.arc(x + this.squareSize / 2, y + this.squareSize / 2, 8, 0, 2 * Math.PI);
+this.ctx.fill();
+
+this.ctx.shadowColor = this.highlightColor;
+this.ctx.shadowBlur = 10;
+this.ctx.beginPath();
+this.ctx.arc(x + this.squareSize / 2, y + this.squareSize / 2, 8, 0, 2 * Math.PI);
+this.ctx.fill();
+
+this.ctx.shadowColor = 'transparent';
+this.ctx.shadowBlur = 0;
+}
+}
+
+drawPieces() {
+const board = this.chess.board();
+
+for (let row = 0; row < 8; row++) {
+for (let col = 0; col < 8; col++) {
+const piece = board[row][col];
+if (piece) {
+let displayRow = row;
+let displayCol = col;
+
+if (this.boardFlipped) {
+displayRow = 7 - row;
+displayCol = 7 - col;
+}
+
+this.drawPiece(piece, displayCol, displayRow);
+}
+}
+}
+}
+
+drawPiece(piece, col, row) {
+const centerX = col * this.squareSize + this.squareSize / 2;
+const centerY = row * this.squareSize + this.squareSize / 2 + 6;
+
+this.ctx.save();
+
+let adjustedPieceSize = this.pieceSize;
+if (piece.type === 'b') {
+adjustedPieceSize = this.pieceSize * 0.99;
+} else {
+adjustedPieceSize = this.pieceSize * 1.05;
+}
+
+this.ctx.font = `${adjustedPieceSize}px serif`;
+this.ctx.textAlign = 'center';
+this.ctx.textBaseline = 'middle';
+
+const symbols = {
+'p': '♟',
+'r': '♜',
+'n': '♞',
+'b': '♝',
+'q': '♛',
+'k': '♚'
+};
+
+if (piece.color === 'b') {
+this.ctx.strokeStyle = '#ffffff';
+this.ctx.lineWidth = 3;
+this.ctx.strokeText(symbols[piece.type], centerX, centerY);
+
+this.ctx.strokeStyle = '#000000';
+this.ctx.lineWidth = 1;
+this.ctx.strokeText(symbols[piece.type], centerX, centerY);
+
+this.ctx.strokeStyle = '#ffffff';
+this.ctx.lineWidth = 1;
+this.ctx.strokeText(symbols[piece.type], centerX, centerY);
+} else {
+this.ctx.strokeStyle = '#000000';
+this.ctx.lineWidth = 2;
+this.ctx.strokeText(symbols[piece.type], centerX, centerY);
+}
+
+this.ctx.fillStyle = piece.color === 'w' ? '#ffffff' : '#000000';
+this.ctx.fillText(symbols[piece.type], centerX, centerY);
+
+if (piece.type === 'p') {
+this.ctx.save();
+this.ctx.font = `${this.pieceSize * 0.3}px serif`;
+this.ctx.textAlign = 'center';
+this.ctx.textBaseline = 'middle';
+
+if (piece.color === 'b') {
+this.ctx.fillStyle = '#800020';
+} else {
+this.ctx.fillStyle = '#ff8c00';
+}
+
+this.ctx.beginPath();
+this.ctx.arc(centerX, centerY - 23, 5, 0, 2 * Math.PI);
+this.ctx.fill();
+
+this.ctx.restore();
+}
+
+this.ctx.restore();
+}
+
+drawCoordinates() {
+this.ctx.font = 'bold 18px Arial';
+
+const files = this.boardFlipped ? 'hgfedcba' : 'abcdefgh';
+for (let i = 0; i < 8; i++) {
+const x = i * this.squareSize + this.squareSize / 2;
+const y = this.squareSize * 8 + 25;
+
+this.ctx.fillStyle = this.themes[this.currentTheme].light.gradient;
+this.ctx.strokeStyle = this.themes[this.currentTheme].border;
+this.ctx.lineWidth = 2;
+
+this.ctx.textAlign = 'center';
+this.ctx.textBaseline = 'middle';
+this.ctx.strokeText(files[i], x, y);
+this.ctx.fillText(files[i], x, y);
+}
+
+const ranks = this.boardFlipped ? '12345678' : '87654321';
+for (let i = 0; i < 8; i++) {
+const x = this.squareSize * 8 + 25;
+const y = i * this.squareSize + this.squareSize / 2;
+
+this.ctx.fillStyle = this.themes[this.currentTheme].light.gradient;
+this.ctx.strokeStyle = this.themes[this.currentTheme].border;
+this.ctx.lineWidth = 2;
+
+this.ctx.textAlign = 'center';
+this.ctx.textBaseline = 'middle';
+this.ctx.strokeText(ranks[i], x, y);
+this.ctx.fillText(ranks[i], x, y);
+}
+}
+
+updateDisplay() {
+document.getElementById('turnDisplay').textContent = this.chess.turn() === 'w' ? 'White' : 'Black';
+document.getElementById('checkDisplay').textContent = this.chess.inCheck() ? 'Yes' : 'No';
+document.getElementById('moveNumberDisplay').textContent = this.chess.moveNumber();
+document.getElementById('positionDisplay').textContent = `${this.currentPath.length}/${this.gameTree ? this.getTotalMoves() : 0}`;
+document.getElementById('fenInput').value = this.chess.fen();
+}
+
+getTotalMoves() {
+if (!this.gameTree) return 0;
+
+let count = 0;
+const countMoves = (node) => {
+if (node.move) count++;
+if (node.children.length > 0) {
+countMoves(node.children[0]); // Count only main line
+}
+};
+
+countMoves(this.gameTree);
+return count;
+}
+
+resetBoard() {
+this.chess.reset();
+this.gameTree = null;
+this.currentNode = null;
+this.currentPath = [];
+this.gameHeaders = {};
+this.selectedSquare = null;
+this.highlightedSquares = [];
+
+this.updateGameInfo();
+this.renderNotation();
+this.updateDisplay();
+this.drawBoard();
+
+document.getElementById('pgnText').value = '';
+document.getElementById('pgnFile').value = '';
+}
+
+flipBoard() {
+this.boardFlipped = !this.boardFlipped;
+this.drawBoard();
+}
+
+clearBoard() {
+this.chess.clear();
+this.selectedSquare = null;
+this.highlightedSquares = [];
+this.updateDisplay();
+this.drawBoard();
+}
+
+loadFEN() {
+const fen = document.getElementById('fenInput').value.trim();
+if (fen) {
+try {
+this.chess.load(fen);
+this.selectedSquare = null;
+this.highlightedSquares = [];
+this.updateDisplay();
+this.drawBoard();
+} catch (e) {
+this.showNotification('Invalid FEN notation', 'error');
+}
+}
+}
+
+async copyFEN() {
+try {
+await navigator.clipboard.writeText(this.chess.fen());
+this.showNotification('FEN copied to clipboard', 'success');
+} catch (e) {
+this.showNotification('Failed to copy FEN', 'error');
+}
+}
+
+exportPGN() {
+if (!this.gameTree) {
+this.showNotification('No game to export', 'error');
+return;
+}
+
+let pgn = '';
+
+// Add headers
+for (const [key, value] of Object.entries(this.gameHeaders)) {
+pgn += `[${key} "${value}"]\n`;
+}
+
+pgn += '\n';
+
+// Add moves (simplified - only main line)
+pgn += this.exportMoveTree(this.gameTree);
+
+// Create download
+const blob = new Blob([pgn], { type: 'text/plain' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'game.pgn';
+a.click();
+URL.revokeObjectURL(url);
+
+this.showNotification('PGN exported successfully', 'success');
+}
+
+exportMoveTree(node) {
+let pgn = '';
+let moveNumber = 1;
+
+const exportNode = (current, isWhite = true) => {
+if (current.children.length > 0) {
+const child = current.children[0];
+if (child.move) {
+if (isWhite) {
+pgn += `${moveNumber}. `;
+}
+pgn += `${child.san} `;
+if (!isWhite) {
+moveNumber++;
+}
+exportNode(child, !isWhite);
+}
+}
+};
+
+exportNode(node);
+return pgn.trim();
+}
+
+changeTheme(themeName) {
+this.currentTheme = themeName;
+
+const buttons = ['currentTheme', 'warmTheme', 'coolTheme', 'greenTheme'];
+const themeMap = { current: 'currentTheme', warm: 'warmTheme', cool: 'coolTheme', green: 'greenTheme' };
+
+buttons.forEach(buttonId => {
+const button = document.getElementById(buttonId);
+if (buttonId === themeMap[themeName]) {
+button.classList.add('border-2');
+button.classList.remove('border-transparent');
+if (buttonId === 'currentTheme') {
+button.classList.add('border-amber-600');
+} else if (buttonId === 'warmTheme') {
+button.classList.add('border-amber-500');
+} else if (buttonId === 'coolTheme') {
+button.classList.add('border-blue-400');
+} else if (buttonId === 'greenTheme') {
+button.classList.add('border-green-400');
+}
+} else {
+button.classList.add('border-transparent');
+button.classList.remove('border-2', 'border-amber-600', 'border-amber-500', 'border-blue-400', 'border-green-400');
+}
+});
+
+this.drawBoard();
+}
+
+addMoveToTree(san) {
+// Create game tree if it doesn't exist
+if (!this.gameTree) {
+this.gameTree = { move: null, children: [], parent: null, san: '', comment: '' };
+this.currentNode = this.gameTree;
+this.currentPath = [];
+}
+
+// Find current position in tree
+let currentNode = this.gameTree;
+for (const index of this.currentPath) {
+if (currentNode.children[index]) {
+currentNode = currentNode.children[index];
+}
+}
+
+// Check if this move already exists as a child
+let existingMoveIndex = -1;
+for (let i = 0; i < currentNode.children.length; i++) {
+if (currentNode.children[i].san === san) {
+existingMoveIndex = i;
+break;
+}
+}
+
+if (existingMoveIndex >= 0) {
+// Move already exists, navigate to it
+this.currentPath.push(existingMoveIndex);
+this.currentNode = currentNode.children[existingMoveIndex];
+} else {
+// Add new move to tree
+const newMove = {
+move: san,
+children: [],
+parent: currentNode,
+san: san,
+comment: ''
+};
+
+currentNode.children.push(newMove);
+this.currentPath.push(currentNode.children.length - 1);
+this.currentNode = newMove;
+}
+}
+
+showNotification(message, type = 'info') {
+const notification = document.createElement('div');
+notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+} text-white`;
+notification.textContent = message;
+document.body.appendChild(notification);
+
+setTimeout(() => {
+notification.remove();
+}, 3000);
+}
+}
+
+// Initialize click handlers for notation after DOM is ready
+document.addEventListener('click', (e) => {
+if (e.target.hasAttribute('data-path')) {
+const path = JSON.parse(e.target.getAttribute('data-path'));
+analyzer.navigateToMove(path);
+}
+});
+
+// Add navigation method to analyzer
+ChessAnalyzer.prototype.navigateToMove = function(targetPath) {
+if (!this.gameTree) return;
+
+this.chess.reset();
+this.currentPath = [...targetPath];
+this.currentNode = this.gameTree;
+
+for (const index of this.currentPath) {
+if (this.currentNode.children[index]) {
+this.currentNode = this.currentNode.children[index];
+if (this.currentNode.move) {
+try {
+this.chess.move(this.currentNode.san);
+} catch (e) {
+console.error('Invalid move during navigation:', this.currentNode.san);
+}
+}
+}
+}
+
+this.selectedSquare = null;
+this.highlightedSquares = [];
+this.updateDisplay();
+this.drawBoard();
+this.renderNotation();
+};
+
+// Dark mode handling
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+document.documentElement.classList.add('dark');
+}
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+if (event.matches) {
+document.documentElement.classList.add('dark');
+} else {
+document.documentElement.classList.remove('dark');
+}
+});
+
+// Initialize the chess analyzer
+const analyzer = new ChessAnalyzer();
+</script>
+</body>
+</html>
+
+``
